@@ -4,7 +4,7 @@ from .signer import Signer
 from .config import get_contract_config
 from .http_helpers.helpers import get
 from .types import SafeTransaction, SafeTransactionArgs, SafeCreateTransactionArgs
-from .exceptions import RelayerException
+from .exceptions import RelayerClientException
 from .endpoints import (
     GET_NONCE,
     GET_DEPLOYED,
@@ -51,13 +51,13 @@ class RelayClient:
 
     def get_transaction(self, transaction_id: str):
         """
-        # TODO: docstring
+        Gets the transaction given the transaction_id
         """
         return get(f"{self.relayer_url}{GET_TRANSACTION}?id={transaction_id}")
 
     def get_transactions(self):
         """
-        # TODO: docstring
+        Gets all transactions for the builder
         """
         return get(f"{self.relayer_url}{GET_TRANSACTIONS}")
 
@@ -93,10 +93,12 @@ class RelayClient:
 
     def assert_signer_needed(self):
         if self.signer is None:
-            raise RelayerException("signer is required for this endpoint")
+            raise RelayerClientException("signer is required for this endpoint")
 
     def assert_builder_creds_needed(self):
         if self.builder_config is None:
-            raise RelayerException("builder credentials are required for this endpoint")
+            raise RelayerClientException(
+                "builder credentials are required for this endpoint"
+            )
 
     pass

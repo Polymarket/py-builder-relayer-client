@@ -66,9 +66,9 @@ class TransactionRequest:
     to: str
     proxy: str
     data: str
-    nonce: str = None
     signature: str
     signature_params: SignatureParams
+    nonce: str = None
     metadata: str = None
 
     def to_dict(self) -> Dict[str, str]:
@@ -114,3 +114,10 @@ class RelayerTransactionState(Enum):
     STATE_INVALID = "STATE_INVALID"
     STATE_CONFIRMED = "STATE_CONFIRMED"
     STATE_FAILED = "STATE_FAILED"
+
+
+@dataclass
+class SplitSig:
+    r: str
+    s: str
+    v: str

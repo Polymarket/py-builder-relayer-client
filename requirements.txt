@@ -6,4 +6,5 @@ pytest==8.2.2
 python-dotenv==0.19.2
 requests==2.32.3
 responses==0.25.8
+poly_eip712_structs==0.0.1
 py-builder-signing-sdk==0.0.2

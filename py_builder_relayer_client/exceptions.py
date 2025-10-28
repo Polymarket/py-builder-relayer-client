@@ -1,12 +1,12 @@
 from requests import Response
 
 
-class RelayerException(Exception):
+class RelayerClientException(Exception):
     def __init__(self, msg):
         self.msg = msg
 
 
-class RelayerApiException(RelayerException):
+class RelayerApiException(RelayerClientException):
     def __init__(self, resp: Response = None, error_msg=None):
         assert resp is not None or error_msg is not None
         if resp is not None:
