@@ -4,7 +4,7 @@ from eth_abi.packed import encode_packed
 from hexbytes import HexBytes
 
 from ..config import ContractConfig
-from ..types import (
+from ..models import (
     SafeTransaction,
     OperationType,
     TransactionRequest,
@@ -120,9 +120,11 @@ def build_safe_transaction_request(
 
     print(f"Safe Address: {safe_address}")
 
+    print(f"nonce: {args.nonce}")
+
     # generate the safe struct hash
     struct_hash = create_struct_hash(
-        args.chainId,
+        args.chain_id,
         safe_address,
         transaction.to,
         transaction.value,
@@ -146,7 +148,7 @@ def build_safe_transaction_request(
 
     sig_params = SignatureParams(
         gas_price=gas_price,
-        operation=str(transaction.value),
+        operation=str(transaction.operation.value),
         safe_txn_gas=safe_txn_gas,
         base_gas=base_gas,
         gas_token=gas_token,
@@ -161,6 +163,7 @@ def build_safe_transaction_request(
         from_address=args.from_address,
         to=transaction.to,
         proxy=safe_address,
+        value=transaction.value,
         data=transaction.data,
         nonce=args.nonce,
         signature=packed_sig,

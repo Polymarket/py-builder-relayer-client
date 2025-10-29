@@ -3,7 +3,7 @@ from eth_abi import encode
 from eth_abi.packed import encode_packed
 from eth_utils import to_hex, to_bytes, to_checksum_address, keccak
 
-from ..types import SafeTransaction, OperationType
+from ..models import SafeTransaction, OperationType
 
 
 def create_safe_multisend_transaction(

@@ -5,7 +5,7 @@ from py_builder_relayer_client.builder.safe import (
     create_safe_signature,
     split_and_pack_sig,
 )
-from py_builder_relayer_client.types import OperationType
+from py_builder_relayer_client.models import OperationType
 from py_builder_relayer_client.signer import Signer
 
 

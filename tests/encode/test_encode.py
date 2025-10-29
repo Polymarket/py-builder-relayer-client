@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from py_builder_relayer_client.types import SafeTransaction, OperationType
+from py_builder_relayer_client.models import SafeTransaction, OperationType
 from py_builder_relayer_client.encode.safe import create_safe_multisend_transaction
 
 

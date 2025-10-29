@@ -65,6 +65,7 @@ class TransactionRequest:
     from_address: str  # TODO: when converting to dict, convert this to plain "from"
     to: str
     proxy: str
+    value: str
     data: str
     signature: str
     signature_params: SignatureParams
@@ -76,9 +77,10 @@ class TransactionRequest:
             "type": self.type,
             "from": self.from_address,
             "to": self.to,
-            "proxyAddress": self.proxy,
+            "proxyWallet": self.proxy,
             "data": self.data,
             "signature": self.signature,
+            "value": self.value,
         }
 
         if self.signature_params is not None:
