@@ -2,7 +2,7 @@ from poly_eip712_structs import make_domain
 
 from ..signer import Signer
 from .derive import derive
-from ..constants.constants import ZERO_ADDRESS, SAFE_FACTORY_NAME
+from ..constants.constants import SAFE_FACTORY_NAME
 from ..models import (
     SafeCreateTransactionArgs,
     SignatureParams,
@@ -67,7 +67,7 @@ def build_safe_create_transaction_request(
     )
 
     sig_params = SignatureParams(
-        payment_token=ZERO_ADDRESS,
+        payment_token=args.payment_token,
         payment=args.payment,
         payment_receiver=args.payment_receiver,
     )

@@ -56,12 +56,12 @@ class RelayClient:
             self.builder_config = builder_config
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def get_nonce(self, signer_adderss: str, signer_type: str):
+    def get_nonce(self, signer_address: str, signer_type: str):
         """
         Gets the nonce for the signer
         """
         return get(
-            f"{self.relayer_url}{GET_NONCE}?address={signer_adderss}&type={signer_type}"
+            f"{self.relayer_url}{GET_NONCE}?address={signer_address}&type={signer_type}"
         )
 
     def get_transaction(self, transaction_id: str):
@@ -204,7 +204,7 @@ class RelayClient:
         )
         return None
 
-    def _post_request(self, method: str, request_path: str, body: str = None):
+    def _post_request(self, method: str, request_path: str, body: dict = None):
         builder_headers = self._generate_builder_headers(method, request_path, body)
         if builder_headers is None:
             raise RelayerClientException("could not generate builder headers")
@@ -213,16 +213,14 @@ class RelayClient:
         )
 
     def _generate_builder_headers(
-        self, method: str, request_path: str, body: str = None
-    ):
+        self, method: str, request_path: str, body: dict = None
+    ) -> Optional[dict]:
         if body is not None:
             body = str(body)
         headers = self.builder_config.generate_builder_headers(
             method, request_path, body
         )
-        if headers is None:
-            return None
-        return headers.to_dict()
+        return headers.to_dict() if headers is not None else None
 
     def get_expected_safe(self):
         """

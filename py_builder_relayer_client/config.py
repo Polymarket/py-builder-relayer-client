@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from eth_utils import to_checksum_address
 
+from .exceptions import RelayerClientException
+
 
 @dataclass
 class ContractConfig:
@@ -35,6 +37,6 @@ def get_contract_config(chain_id: int) -> ContractConfig:
     """
     config = CONFIG.get(chain_id)
     if config is None:
-        raise Exception(f"Invalid chainID: {chain_id}")
+        raise RelayerClientException(f"Invalid chainID: {chain_id}")
 
     return config
