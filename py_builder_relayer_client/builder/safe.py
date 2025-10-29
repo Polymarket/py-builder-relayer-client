@@ -118,10 +118,6 @@ def build_safe_transaction_request(
     refund_receiver = ZERO_ADDRESS
     safe_address = derive(args.from_address, factory)
 
-    print(f"Safe Address: {safe_address}")
-
-    print(f"nonce: {args.nonce}")
-
     # generate the safe struct hash
     struct_hash = create_struct_hash(
         args.chain_id,
@@ -138,11 +134,7 @@ def build_safe_transaction_request(
         args.nonce,
     )
 
-    print(f"Struct hash: {struct_hash}")
-
     sig = create_safe_signature(signer, struct_hash)
-
-    print(f"sig: {sig}")
 
     packed_sig = split_and_pack_sig(sig)
 

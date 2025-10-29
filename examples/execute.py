@@ -21,11 +21,15 @@ def encode_approve(spender: str, amount: int) -> str:
     encoded_args = encode(["address", "uint256"], [spender, amount])
     return "0x" + (selector + encoded_args).hex()
 
+
 def create_usdc_approve_txn(token: str, spender: str):
     token = to_checksum_address(token)
     spender = to_checksum_address(spender)
 
-    data = encode_approve(spender, 115792089237316195423570985008687907853269984665640564039457584007913129639935)
+    data = encode_approve(
+        spender,
+        115792089237316195423570985008687907853269984665640564039457584007913129639935,
+    )
     return SafeTransaction(
         to=token,
         operation=OperationType.Call,
@@ -33,26 +37,27 @@ def create_usdc_approve_txn(token: str, spender: str):
         value="0",
     )
 
+
 def main():
-    relayer_url = os.getenv("RELAYER_URL_PROD", "https://relayer-v2-staging.polymarket.dev/")
-    chain_id = int(os.getenv("CHAIN_ID_PROD", 80002))
+    print("starting...")
+    relayer_url = os.getenv("RELAYER_URL", "https://relayer-v2-staging.polymarket.dev/")
+    chain_id = int(os.getenv("CHAIN_ID", 80002))
     pk = os.getenv("PK")
-    print(f"chain_id: {chain_id}")
 
     builder_config = BuilderConfig(
         local_builder_creds=BuilderApiKeyCreds(
-            key=os.getenv("BUILDER_API_KEY_PROD"),
-            secret=os.getenv("BUILDER_SECRET_PROD"),
-            passphrase=os.getenv("BUILDER_PASS_PHRASE_PROD"),
+            key=os.getenv("BUILDER_API_KEY"),
+            secret=os.getenv("BUILDER_SECRET"),
+            passphrase=os.getenv("BUILDER_PASS_PHRASE"),
         )
     )
 
     client = RelayClient(relayer_url, chain_id, pk, builder_config)
-    
+
     usdc = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
     ctf = "0x4d97dcd97ec945f40cf65f87097ace5ea0476045"
     txn = create_usdc_approve_txn(usdc, ctf)
-    
+
     resp = client.execute([txn, txn], "approve USDC on CTF")
     print(resp)
 

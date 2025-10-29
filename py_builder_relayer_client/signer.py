@@ -22,7 +22,9 @@ class Signer:
         """
         Signs a message hash
         """
-        return Account._sign_hash(message_hash, self.private_key).signature.hex()
+        return prepend_zx(
+            Account._sign_hash(message_hash, self.private_key).signature.hex()
+        )
 
     def sign_eip712_struct_hash(self, message_hash):
         """

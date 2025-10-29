@@ -62,13 +62,13 @@ class SignatureParams:
 @dataclass
 class TransactionRequest:
     type: str
-    from_address: str  # TODO: when converting to dict, convert this to plain "from"
+    from_address: str
     to: str
     proxy: str
-    value: str
     data: str
     signature: str
     signature_params: SignatureParams
+    value: str = None
     nonce: str = None
     metadata: str = None
 
@@ -80,9 +80,9 @@ class TransactionRequest:
             "proxyWallet": self.proxy,
             "data": self.data,
             "signature": self.signature,
-            "value": self.value,
         }
-
+        if self.value is not None:
+            d["value"] = self.value
         if self.signature_params is not None:
             d["signatureParams"] = self.signature_params.to_dict()
         if self.nonce is not None:

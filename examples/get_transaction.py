@@ -8,7 +8,9 @@ load_dotenv()
 
 def main():
     print("starting...")
-    relayer_url = os.getenv("RELAYER_URL_PROD", "https://relayer-v2-staging.polymarket.dev/")
+    relayer_url = os.getenv(
+        "RELAYER_URL_PROD", "https://relayer-v2-staging.polymarket.dev/"
+    )
     chain_id = int(os.getenv("CHAIN_ID_PROD", 80002))
     client = RelayClient(relayer_url, chain_id)
 

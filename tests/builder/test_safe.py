@@ -33,9 +33,6 @@ class TestSafe(TestCase):
         self.assertEqual(expected_struct_hash, struct_hash)
 
     def test_create_safe_signature(self):
-        """
-        packed sig: 0xad62657208a0d885f91bba7490de238741bf7c51eb792f00856171aafc9e012373156fb672e55d840733c8bf723ec458545fcd5749aa5e547f808c222e7e117020
-        """
 
         struct_hash = (
             "0x06d5102c3e356b62a75f8203cd5ce7ab1fa8fdab33875ef621eee102220d90b8"

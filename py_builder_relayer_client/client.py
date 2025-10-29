@@ -6,10 +6,17 @@ from typing import List, Optional
 
 from .signer import Signer
 from .config import get_contract_config
-from .http_helpers.helpers import get, post
+from .constants.constants import ZERO_ADDRESS
+from .http_helpers.helpers import get, post, POST
 from .builder.derive import derive
 from .builder.safe import build_safe_transaction_request
-from .models import SafeTransaction, SafeTransactionArgs, TransactionType
+from .builder.create import build_safe_create_transaction_request
+from .models import (
+    SafeTransaction,
+    SafeTransactionArgs,
+    SafeCreateTransactionArgs,
+    TransactionType,
+)
 from .exceptions import RelayerClientException
 from .endpoints import (
     GET_NONCE,
@@ -68,50 +75,53 @@ class RelayClient:
         Gets all transactions for the builder
         """
         return get(f"{self.relayer_url}{GET_TRANSACTIONS}")
-    
+
     def get_deployed(self, safe_address) -> bool:
         """
-        # TODO: docstring
+        Returns a boolean that indicates if a safe is deployed
         """
-        deployed_payload = get(f"{self.relayer_url}{GET_DEPLOYED}?address={safe_address}")
+        deployed_payload = get(
+            f"{self.relayer_url}{GET_DEPLOYED}?address={safe_address}"
+        )
         if deployed_payload and deployed_payload.get("deployed"):
             return bool(deployed_payload.get("deployed"))
         return False
-    
 
     def execute(self, transactions: list[SafeTransaction], metadata: str = None):
         self.assert_signer_needed()
         self.assert_builder_creds_needed()
         safe_address = self.get_expected_safe()
-        
+
         deployed = self.get_deployed(safe_address)
         if not deployed:
-            raise RelayerClientException(f"expected safe {safe_address} is not deployed")
+            raise RelayerClientException(
+                f"expected safe {safe_address} is not deployed"
+            )
 
         from_address = self.signer.address()
-        
+
         nonce_payload = self.get_nonce(from_address, TransactionType.SAFE.value)
         nonce = 0
         if nonce_payload is None or nonce_payload.get("nonce") is None:
             raise RelayerClientException("invalid nonce payload received")
         nonce = nonce_payload.get("nonce")
-        
+
         safe_args = SafeTransactionArgs(
             from_address=from_address,
             nonce=nonce,
             chain_id=self.chain_id,
-            transactions=transactions
+            transactions=transactions,
         )
 
         txn_request = build_safe_transaction_request(
             signer=self.signer,
             args=safe_args,
             config=self.contract_config,
-            metadata=metadata
+            metadata=metadata,
         ).to_dict()
-        
+
         self.logger.debug(f"Created transaction request: {txn_request}")
-        resp = self._post_request("POST", SUBMIT_TRANSACTION, txn_request)
+        resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
         return ClientRelayerTransactionResponse(
             resp.get("transactionID"),
             resp.get("transactionHash"),
@@ -126,9 +136,29 @@ class RelayClient:
         deployed = self.get_deployed(safe_address)
         if deployed:
             raise RelayerClientException(f"safe {safe_address} is already deployed!")
-        
 
-        pass
+        from_address = self.signer.address()
+
+        args = SafeCreateTransactionArgs(
+            from_address=from_address,
+            chain_id=self.chain_id,
+            payment_token=ZERO_ADDRESS,
+            payment="0",
+            payment_receiver=ZERO_ADDRESS,
+        )
+
+        txn_request = build_safe_create_transaction_request(
+            self.signer, args, self.contract_config
+        ).to_dict()
+
+        self.logger.debug(f"Created transaction request: {txn_request}")
+        resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
+
+        return ClientRelayerTransactionResponse(
+            resp.get("transactionID"),
+            resp.get("transactionHash"),
+            self,
+        )
 
     def poll_until_state(
         self,
@@ -146,37 +176,49 @@ class RelayClient:
         if poll_frequency is not None and poll_frequency >= 1000:
             poll_frequency_ms = poll_frequency
 
-        print(f"Waiting for transaction {transaction_id} matching states: {target_states}...")
+        print(
+            f"Waiting for transaction {transaction_id} matching states: {target_states}..."
+        )
 
         for _ in range(poll_limit):
             transactions = self.get_transaction(transaction_id)
             if transactions:
                 txn = transactions[0]
                 txn_state = txn.get("state")
-                if txn_state and isinstance(txn_state, str) and txn_state in target_states:
+                if (
+                    txn_state
+                    and isinstance(txn_state, str)
+                    and txn_state in target_states
+                ):
                     return txn
                 if fail_state is not None and txn_state == fail_state:
                     txn_hash = txn.get("transactionHash")
-                    self.logger.error(f"txn {transaction_id} failed onchain, transaction_hash: {txn_hash}!")
+                    self.logger.error(
+                        f"txn {transaction_id} failed onchain, transaction_hash: {txn_hash}!"
+                    )
                     return None
             time.sleep(poll_frequency_ms / 1000)
 
-        self.logger.info(f"Transaction {transaction_id} not found or not in given states, timing out!")
+        self.logger.info(
+            f"Transaction {transaction_id} not found or not in given states, timing out!"
+        )
         return None
 
     def _post_request(self, method: str, request_path: str, body: str = None):
         builder_headers = self._generate_builder_headers(method, request_path, body)
         if builder_headers is None:
             raise RelayerClientException("could not generate builder headers")
-        return post(f"{self.relayer_url}{request_path}", headers=builder_headers, data=body)
+        return post(
+            f"{self.relayer_url}{request_path}", headers=builder_headers, data=body
+        )
 
-    def _generate_builder_headers(self, method: str, request_path: str, body: str = None):
+    def _generate_builder_headers(
+        self, method: str, request_path: str, body: str = None
+    ):
         if body is not None:
             body = str(body)
         headers = self.builder_config.generate_builder_headers(
-            method,
-            request_path,
-            body
+            method, request_path, body
         )
         if headers is None:
             return None
@@ -190,12 +232,12 @@ class RelayClient:
         addr = self.signer.address()
         return derive(addr, self.contract_config.safe_factory)
 
-
     def assert_signer_needed(self):
         if self.signer is None:
             raise RelayerClientException("signer is required for this endpoint")
 
     def assert_builder_creds_needed(self):
         if self.builder_config is None:
-            raise RelayerClientException("builder credentials are required for this endpoint")
-
+            raise RelayerClientException(
+                "builder credentials are required for this endpoint"
+            )

@@ -1,9 +1,8 @@
-from poly_eip712_structs import EIP712Struct, Address, Uint, Bytes
-from eth_utils import keccak
-from ..utils.utils import prepend_zx
+from poly_eip712_structs import Address, Uint, Bytes
+from .base import BaseEIP712Model
 
 
-class SafeTx(EIP712Struct):
+class SafeTx(BaseEIP712Model):
     """
     SafeTx
     """
@@ -41,7 +40,3 @@ class SafeTx(EIP712Struct):
             "refundReceiver": self["refundReceiver"],
             "nonce": self["nonce"],
         }
-
-    def generate_struct_hash(self, domain) -> str:
-        struct_hash = keccak(self.signable_bytes(domain)).hex()
-        return prepend_zx(struct_hash)
