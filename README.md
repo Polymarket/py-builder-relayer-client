@@ -14,6 +14,7 @@ Create a `.env` file based on .env.example with credentials:
 
 ```env
 RELAYER_URL=https://relayer-v2-staging.polymarket.dev/
+RPC_URL=https://polygon-rpc.com
 CHAIN_ID=80002
 PK=your_private_key_here
 BUILDER_API_KEY=your_api_key

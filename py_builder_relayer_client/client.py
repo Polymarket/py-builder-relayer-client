@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 from py_builder_signing_sdk.config import BuilderConfig
@@ -11,15 +12,23 @@ from .http_helpers.helpers import get, post, POST
 from .builder.derive import derive
 from .builder.safe import build_safe_transaction_request
 from .builder.create import build_safe_create_transaction_request
+from .builder.proxy import build_proxy_transaction_request
+from .encode.proxy import encode_proxy_transaction_data
 from .models import (
     SafeTransaction,
     SafeTransactionArgs,
     SafeCreateTransactionArgs,
     TransactionType,
+    RelayerTxType,
+    RelayPayload,
+    ProxyTransactionArgs,
+    ProxyTransaction,
+    CallType,
 )
 from .exceptions import RelayerClientException
 from .endpoints import (
     GET_NONCE,
+    GET_RELAY_PAYLOAD,
     GET_DEPLOYED,
     GET_TRANSACTION,
     GET_TRANSACTIONS,
@@ -40,16 +49,22 @@ class RelayClient:
         chain_id: int,
         private_key: str = None,
         builder_config: BuilderConfig = None,
+        relayer_tx_type: RelayerTxType = RelayerTxType.SAFE,
+        rpc_url: Optional[str] = None,
     ):
         self.relayer_url = (
             relayer_url[0:-1] if relayer_url.endswith("/") else relayer_url
         )
         self.chain_id = chain_id
         self.contract_config = get_contract_config(chain_id)
+        self.relayer_tx_type = relayer_tx_type
+
+        # Use provided rpc_url, or fall back to environment variable
+        rpc_url = rpc_url or os.getenv("RPC_URL")
 
         self.signer = None
         if private_key is not None:
-            self.signer = Signer(private_key, chain_id)
+            self.signer = Signer(private_key, chain_id, rpc_url=rpc_url)
 
         self.builder_config = None
         if builder_config is not None:
@@ -62,6 +77,20 @@ class RelayClient:
         """
         return get(
             f"{self.relayer_url}{GET_NONCE}?address={signer_address}&type={signer_type}"
+        )
+
+    def get_relay_payload(self, signer_address: str, signer_type: str) -> RelayPayload:
+        """
+        Gets the relay payload (relay address and nonce) for the signer
+        """
+        payload = get(
+            f"{self.relayer_url}{GET_RELAY_PAYLOAD}?address={signer_address}&type={signer_type}"
+        )
+        if payload is None or payload.get("address") is None or payload.get("nonce") is None:
+            raise RelayerClientException("invalid relay payload received")
+        return RelayPayload(
+            address=payload.get("address"),
+            nonce=payload.get("nonce"),
         )
 
     def get_transaction(self, transaction_id: str):
@@ -88,8 +117,81 @@ class RelayClient:
         return False
 
     def execute(self, transactions: list[SafeTransaction], metadata: str = None):
+        """
+        Executes a batch of transactions
+        Automatically routes to executeProxyTransactions or executeSafeTransactions based on relayer_tx_type
+        """
+        if self.relayer_tx_type == RelayerTxType.PROXY:
+            return self.executeProxyTransactions(transactions, metadata)
+        else:
+            return self.executeSafeTransactions(transactions, metadata)
+
+    def executeProxyTransactions(self, transactions: list[ProxyTransaction], metadata: str = None):
+        """
+        Executes a batch of proxy transactions
+        """
         self.assert_signer_needed()
         self.assert_builder_creds_needed()
+
+        if self.contract_config.proxy_factory is None or self.contract_config.relay_hub is None:
+            raise RelayerClientException("Proxy contracts are not configured for this chain")
+
+        self.logger.debug("Executing proxy transactions...")
+        start = time.time()
+        from_address = self.signer.address()
+
+        # Get relay payload (relay address and nonce)
+        relay_payload = self.get_relay_payload(from_address, TransactionType.PROXY.value)
+
+        # Convert SafeTransaction to ProxyTransaction
+        proxy_transactions = [
+            ProxyTransaction(
+                to=txn.to,
+                type_code=CallType.Call,
+                data=txn.data,
+                value=txn.value,
+            )
+            for txn in transactions
+        ]
+
+        # Encode proxy transaction data
+        encoded_data = encode_proxy_transaction_data(proxy_transactions)
+
+        # Build ProxyTransactionArgs
+        args = ProxyTransactionArgs(
+            from_address=from_address,
+            gas_price="0",
+            data=encoded_data,
+            relay=relay_payload.address,
+            nonce=relay_payload.nonce,
+        )
+
+        # Build proxy transaction request
+        txn_request = build_proxy_transaction_request(
+            signer=self.signer,
+            args=args,
+            config=self.contract_config,
+            metadata=metadata,
+        ).to_dict()
+
+        self.logger.debug(f"Client side proxy request creation took: {(time.time() - start):.3f} seconds")
+        self.logger.debug(f"Created transaction request: {txn_request}")
+
+        resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
+        return ClientRelayerTransactionResponse(
+            resp.get("transactionID"),
+            resp.get("transactionHash"),
+            self,
+        )
+
+    def executeSafeTransactions(self, transactions: list[SafeTransaction], metadata: str = None):
+        """
+        Executes a batch of safe transactions
+        """
+        import time
+        self.assert_signer_needed()
+        self.assert_builder_creds_needed()
+
         safe_address = self.get_expected_safe()
 
         deployed = self.get_deployed(safe_address)
@@ -98,6 +200,7 @@ class RelayClient:
                 f"expected safe {safe_address} is not deployed"
             )
 
+        start = time.time()
         from_address = self.signer.address()
 
         nonce_payload = self.get_nonce(from_address, TransactionType.SAFE.value)
@@ -120,7 +223,9 @@ class RelayClient:
             metadata=metadata,
         ).to_dict()
 
+        self.logger.debug(f"Client side safe request creation took: {(time.time() - start):.3f} seconds")
         self.logger.debug(f"Created transaction request: {txn_request}")
+
         resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
         return ClientRelayerTransactionResponse(
             resp.get("transactionID"),

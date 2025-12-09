@@ -8,6 +8,12 @@ class OperationType(Enum):
     DelegateCall = 1
 
 
+class CallType(Enum):
+    Invalid = "0"
+    Call = "1"
+    DelegateCall = "2"
+
+
 @dataclass
 class SafeTransaction:
     to: str
@@ -16,13 +22,33 @@ class SafeTransaction:
     value: str
 
 
+@dataclass
+class ProxyTransaction:
+    to: str
+    type_code: CallType
+    data: str
+    value: str
+
+
 class TransactionType(Enum):
     SAFE = "SAFE"
     SAFE_CREATE = "SAFE-CREATE"
+    PROXY = "PROXY"
+
+
+class RelayerTxType(Enum):
+    SAFE = "SAFE"
+    PROXY = "PROXY"
 
 
 @dataclass
 class SignatureParams:
+    # Proxy RelayHub sig params
+    relayer_fee: str = None
+    gas_limit: str = None
+    relay_hub: str = None
+    relay: str = None
+
     # SAFE signature params
     gas_price: str = None
     operation: str = None
@@ -38,6 +64,16 @@ class SignatureParams:
 
     def to_dict(self):
         d = {}
+        # Proxy params
+        if self.relayer_fee is not None:
+            d["relayerFee"] = self.relayer_fee
+        if self.gas_limit is not None:
+            d["gasLimit"] = self.gas_limit
+        if self.relay_hub is not None:
+            d["relayHub"] = self.relay_hub
+        if self.relay is not None:
+            d["relay"] = self.relay
+        # SAFE params
         if self.gas_price is not None:
             d["gasPrice"] = self.gas_price
         if self.operation is not None:
@@ -50,6 +86,7 @@ class SignatureParams:
             d["gasToken"] = self.gas_token
         if self.refund_receiver is not None:
             d["refundReceiver"] = self.refund_receiver
+        # SAFE-CREATE params
         if self.payment_token is not None:
             d["paymentToken"] = self.payment_token
         if self.payment is not None:
@@ -107,6 +144,22 @@ class SafeCreateTransactionArgs:
     payment_token: str
     payment: str
     payment_receiver: str
+
+
+@dataclass
+class RelayPayload:
+    address: str
+    nonce: str
+
+
+@dataclass
+class ProxyTransactionArgs:
+    from_address: str
+    nonce: str
+    gas_price: str
+    data: str
+    relay: str
+    gas_limit: str = None
 
 
 class RelayerTransactionState(Enum):

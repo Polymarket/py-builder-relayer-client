@@ -1,4 +1,5 @@
 GET_NONCE = "/nonce"
+GET_RELAY_PAYLOAD = "/relay-payload"
 GET_TRANSACTION = "/transaction"
 GET_TRANSACTIONS = "/transactions"
 SUBMIT_TRANSACTION = "/submit"
