@@ -1,6 +1,7 @@
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from hexbytes import HexBytes
+
 from .utils.utils import prepend_zx
 
 
@@ -32,5 +33,16 @@ class Signer:
         Applies EIP191 prefix then signs a EIP712 struct hash
         """
         msg = encode_defunct(HexBytes(message_hash))
+        sig = Account.sign_message(msg, self.private_key).signature.hex()
+        return prepend_zx(sig)
+
+    def sign_message(self, message_hash):
+        """
+        Signs a message hash (for proxy transactions)
+        """
+        if isinstance(message_hash, bytes):
+            msg = encode_defunct(message_hash)
+        else:
+            msg = encode_defunct(HexBytes(message_hash))
         sig = Account.sign_message(msg, self.private_key).signature.hex()
         return prepend_zx(sig)
