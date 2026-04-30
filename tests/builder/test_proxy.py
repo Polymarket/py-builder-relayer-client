@@ -19,7 +19,7 @@ class TestProxy(TestCase):
 
     def test_create_proxy_signature(self):
         """
-        Matches TS test: build proxy transaction request
+        Build proxy transaction request
         PK: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
         Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
         """
@@ -31,7 +31,7 @@ class TestProxy(TestCase):
 
         config = get_contract_config(137)
 
-        # USDC approve calldata (same as TS test)
+        # USDC approve calldata.
         usdc = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
         approve_calldata = "0x095ea7b30000000000000000000000004d97dcd97ec945f40cf65f87097ace5ea0476045ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
