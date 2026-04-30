@@ -7,19 +7,30 @@ from py_builder_signing_sdk.config import BuilderConfig
 from typing import List, Optional
 
 from .signer import Signer
-from .config import get_contract_config, is_proxy_config_valid, is_safe_config_valid
+from .config import (
+    get_contract_config,
+    is_proxy_config_valid,
+    is_safe_config_valid,
+    is_deposit_wallet_config_valid,
+)
 from .constants.constants import ZERO_ADDRESS
 from .gas import estimate_gas, DEFAULT_GAS_LIMIT
 from .http_helpers.helpers import get, post, POST
-from .builder.derive import derive, derive_proxy_wallet
+from .builder.derive import derive, derive_proxy_wallet, derive_deposit_wallet
 from .builder.safe import build_safe_transaction_request
 from .builder.proxy import build_proxy_transaction_request
 from .builder.create import build_safe_create_transaction_request
+from .builder.deposit_wallet import (
+    build_deposit_wallet_batch_request,
+    build_deposit_wallet_create_request,
+)
 from .encode.proxy import encode_proxy_transaction_data
 from .models import (
     SafeTransaction,
     SafeTransactionArgs,
     SafeCreateTransactionArgs,
+    DepositWalletCall,
+    DepositWalletTransactionArgs,
     TransactionType,
     Transaction,
     RelayerTxType,
@@ -71,7 +82,9 @@ class RelayClient:
             self.builder_config = builder_config
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.relay_tx_type = relay_tx_type if relay_tx_type is not None else RelayerTxType.SAFE
+        self.relay_tx_type = (
+            relay_tx_type if relay_tx_type is not None else RelayerTxType.SAFE
+        )
 
     def get_nonce(self, signer_address: str, signer_type: str):
         """
@@ -201,8 +214,14 @@ class RelayClient:
 
         from_address = self.signer.address()
 
-        relay_payload = self.get_relay_payload(from_address, TransactionType.PROXY.value)
-        if relay_payload is None or relay_payload.get("nonce") is None or relay_payload.get("address") is None:
+        relay_payload = self.get_relay_payload(
+            from_address, TransactionType.PROXY.value
+        )
+        if (
+            relay_payload is None
+            or relay_payload.get("nonce") is None
+            or relay_payload.get("address") is None
+        ):
             raise RelayerClientException("invalid relay payload received")
 
         encoded_data = encode_proxy_transaction_data(transactions)
@@ -267,6 +286,67 @@ class RelayClient:
             self,
         )
 
+    def deploy_deposit_wallet(self):
+        self.assert_signer_needed()
+        self.assert_builder_creds_needed()
+        if not is_deposit_wallet_config_valid(self.contract_config):
+            raise RelayerClientException(
+                "Deposit wallet contracts are not configured for this chain"
+            )
+
+        from_address = self.signer.address()
+        txn_request = build_deposit_wallet_create_request(
+            from_address, self.contract_config
+        ).to_dict()
+
+        self.logger.debug(f"Created transaction request: {txn_request}")
+        resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
+
+        return ClientRelayerTransactionResponse(
+            resp.get("transactionID"),
+            resp.get("transactionHash"),
+            self,
+        )
+
+    def execute_deposit_wallet_batch(
+        self,
+        calls: list[DepositWalletCall],
+        wallet_address: str,
+        nonce: str,
+        deadline: str,
+    ):
+        self.assert_signer_needed()
+        self.assert_builder_creds_needed()
+        if not is_deposit_wallet_config_valid(self.contract_config):
+            raise RelayerClientException(
+                "Deposit wallet contracts are not configured for this chain"
+            )
+
+        from_address = self.signer.address()
+        args = DepositWalletTransactionArgs(
+            from_address=from_address,
+            chain_id=self.chain_id,
+            wallet_address=wallet_address,
+            nonce=nonce,
+            deadline=deadline,
+            calls=calls,
+        )
+
+        txn_request = build_deposit_wallet_batch_request(
+            signer=self.signer,
+            args=args,
+            config=self.contract_config,
+        ).to_dict()
+
+        self.logger.debug(f"Created transaction request: {txn_request}")
+        resp = self._post_request(POST, SUBMIT_TRANSACTION, txn_request)
+
+        return ClientRelayerTransactionResponse(
+            resp.get("transactionID"),
+            resp.get("transactionHash"),
+            self,
+        )
+
     def poll_until_state(
         self,
         transaction_id: str,
@@ -319,9 +399,7 @@ class RelayClient:
             gas = estimate_gas(self.rpc_url, from_address, to, data)
             return str(gas)
         except (ValueError, requests.RequestException) as e:
-            self.logger.debug(
-                f"Gas estimation failed, using default: {e}"
-            )
+            self.logger.debug(f"Gas estimation failed, using default: {e}")
             return str(DEFAULT_GAS_LIMIT)
 
     def _post_request(self, method: str, request_path: str, body: dict = None):
@@ -361,6 +439,22 @@ class RelayClient:
             )
         addr = self.signer.address()
         return derive_proxy_wallet(addr, self.contract_config.proxy_factory)
+
+    def get_expected_deposit_wallet(self):
+        """
+        Returns the expected deposit wallet for the signer
+        """
+        self.assert_signer_needed()
+        if not is_deposit_wallet_config_valid(self.contract_config):
+            raise RelayerClientException(
+                "Deposit wallet contracts are not configured for this chain"
+            )
+        addr = self.signer.address()
+        return derive_deposit_wallet(
+            addr,
+            self.contract_config.deposit_wallet_factory,
+            self.contract_config.deposit_wallet_implementation,
+        )
 
     def assert_signer_needed(self):
         if self.signer is None:
