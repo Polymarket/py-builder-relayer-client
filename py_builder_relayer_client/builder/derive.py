@@ -71,7 +71,7 @@ def derive_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
     factory = to_checksum_address(factory)
     implementation = to_checksum_address(implementation)
 
-    wallet_id = keccak(to_bytes(hexstr=owner))
+    wallet_id = to_bytes(hexstr=owner).rjust(32, b"\x00")
     args = encode(["address", "bytes32"], [factory, wallet_id])
     salt = keccak(args)
     bytecode_hash = init_code_hash_erc1967(implementation, args)

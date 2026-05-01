@@ -35,7 +35,7 @@ CONFIG = {
             "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
         ),
         deposit_wallet_implementation=to_checksum_address(
-            "0x55913a0bdeccbb77b7af781a48300e6394b5eeae"
+            "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB"
         ),
     ),
     80002: ContractConfig(
@@ -44,10 +44,10 @@ CONFIG = {
             "0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761"
         ),
         deposit_wallet_factory=to_checksum_address(
-            "0x801c740Bcd28531d75a5da176D5511F3329Ab049"
+            "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
         ),
         deposit_wallet_implementation=to_checksum_address(
-            "0x24f3257BF9451bA575E864777ab6f8D7Eac0139B"
+            "0x50a88fE9a441cB4c9c2aD6A2207CE2795C7D7Fbd"
         ),
     ),
 }

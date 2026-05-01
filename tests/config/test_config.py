@@ -16,7 +16,7 @@ class TestConfig(TestCase):
             cfg.deposit_wallet_factory,
         )
         self.assertEqual(
-            "0x55913A0bdecCbB77b7Af781A48300e6394B5EEAE",
+            "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB",
             cfg.deposit_wallet_implementation,
         )
 
@@ -27,11 +27,11 @@ class TestConfig(TestCase):
             "0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761", cfg.safe_multisend
         )
         self.assertEqual(
-            "0x801c740Bcd28531d75a5da176D5511F3329Ab049",
+            "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07",
             cfg.deposit_wallet_factory,
         )
         self.assertEqual(
-            "0x24f3257BF9451bA575E864777ab6f8D7Eac0139B",
+            "0x50a88fE9a441cB4c9c2aD6A2207CE2795C7D7Fbd",
             cfg.deposit_wallet_implementation,
         )
 

@@ -17,5 +17,13 @@ class TestDerive(TestCase):
         factory = "0x801c740Bcd28531d75a5da176D5511F3329Ab049"
         implementation = "0x24f3257BF9451bA575E864777ab6f8D7Eac0139B"
         wallet = derive_deposit_wallet(owner, factory, implementation)
-        expected_wallet = "0x63cB1B4eC2F274Ed553aD5079c6A2542d1c02bd7"
+        expected_wallet = "0x3c6D4D368D1Af2C1555Effbf17Da30Add851A6Ae"
+        self.assertEqual(expected_wallet, wallet)
+
+    def test_derive_deposit_wallet_polygon_factory(self):
+        owner = "0xA60601A4d903af91855C52BFB3814f6bA342f201"
+        factory = "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
+        implementation = "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB"
+        wallet = derive_deposit_wallet(owner, factory, implementation)
+        expected_wallet = "0x8b60BF0f650Bf7a0d93F10D72375b37De18F8c40"
         self.assertEqual(expected_wallet, wallet)
