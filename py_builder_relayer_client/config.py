@@ -32,7 +32,7 @@ CONFIG = {
         proxy_factory=to_checksum_address("0xaB45c5A4B0c941a2F231C04C3f49182e1A254052"),
         relay_hub=to_checksum_address("0xD216153c06E857cD7f72665E0aF1d7D82172F494"),
         deposit_wallet_factory=to_checksum_address(
-            "0x894Ee6B254f251518206f709E9B115f214ebDf17"
+            "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
         ),
         deposit_wallet_implementation=to_checksum_address(
             "0x55913a0bdeccbb77b7af781a48300e6394b5eeae"

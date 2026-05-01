@@ -12,7 +12,7 @@ class TestConfig(TestCase):
             "0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761", cfg.safe_multisend
         )
         self.assertEqual(
-            "0x894Ee6B254f251518206f709E9B115f214ebDf17",
+            "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07",
             cfg.deposit_wallet_factory,
         )
         self.assertEqual(
