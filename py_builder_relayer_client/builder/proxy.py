@@ -33,9 +33,7 @@ def create_proxy_struct_hash(
     to_addr_bytes = HexBytes(to)  # 20 bytes
 
     data_bytes = (
-        to_bytes(hexstr=data)
-        if data.startswith("0x")
-        else to_bytes(hexstr="0x" + data)
+        to_bytes(hexstr=data) if data.startswith("0x") else to_bytes(hexstr="0x" + data)
     )
 
     tx_fee_bytes = int(tx_fee).to_bytes(32, "big")

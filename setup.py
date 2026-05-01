@@ -5,16 +5,20 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="py_builder_relayer_client",
-    version="0.0.1",
+    version="0.0.2rc1",
     author="Polymarket Engineering",
     author_email="engineering@polymarket.com",
     maintainer="Polymarket Engineering",
     maintainer_email="engineering@polymarket.com",
-    description="Python builder signing sdk",
+    description="Python client library for interacting with the Polymarket Relayer infrastructure",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Polymarket/py-builder-relayer-client",
     install_requires=[
+        "eth-account>=0.13.0",
+        "eth-abi>=5.0.0",
+        "eth-utils>=4.0.0",
+        "hexbytes>=1.2.0",
         "python-dotenv",
         "requests",
         "py-builder-signing-sdk",
