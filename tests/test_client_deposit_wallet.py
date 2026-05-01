@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from py_builder_relayer_client.client import RelayClient
 from py_builder_relayer_client.http_helpers.helpers import POST
@@ -32,6 +32,17 @@ class TestClientDepositWallet(TestCase):
     def test_get_expected_deposit_wallet(self):
         client = self._client()
         self.assertEqual(WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_deployed_accepts_wallet_type(self):
+        client = self._client()
+        with patch(
+            "py_builder_relayer_client.client.get", return_value={"deployed": True}
+        ) as mock_get:
+            self.assertTrue(client.get_deployed(WALLET, TransactionType.WALLET.value))
+
+        mock_get.assert_called_once_with(
+            f"http://localhost:8080/deployed?address={WALLET}&type=WALLET"
+        )
 
     def test_deploy_deposit_wallet_posts_wallet_create(self):
         client = self._client()

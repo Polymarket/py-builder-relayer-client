@@ -114,13 +114,14 @@ class RelayClient:
         """
         return get(f"{self.relayer_url}{GET_TRANSACTIONS}")
 
-    def get_deployed(self, safe_address) -> bool:
+    def get_deployed(self, address: str, signer_type: str = None) -> bool:
         """
-        Returns a boolean that indicates if a safe is deployed
+        Returns a boolean that indicates if an address is deployed
         """
-        deployed_payload = get(
-            f"{self.relayer_url}{GET_DEPLOYED}?address={safe_address}"
-        )
+        path = f"{self.relayer_url}{GET_DEPLOYED}?address={address}"
+        if signer_type is not None:
+            path = f"{path}&type={signer_type}"
+        deployed_payload = get(path)
         if deployed_payload and deployed_payload.get("deployed"):
             return bool(deployed_payload.get("deployed"))
         return False
