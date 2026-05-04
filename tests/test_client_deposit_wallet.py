@@ -2,6 +2,7 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 
 from py_builder_relayer_client.client import RelayClient
+from py_builder_relayer_client.exceptions import RelayerClientException
 from py_builder_relayer_client.http_helpers.helpers import POST
 from py_builder_relayer_client.models import DepositWalletCall, TransactionType
 from py_builder_relayer_client.endpoints import SUBMIT_TRANSACTION
@@ -62,12 +63,13 @@ class TestClientDepositWallet(TestCase):
     def test_execute_deposit_wallet_batch_posts_wallet_request(self):
         client = self._client()
         call = DepositWalletCall(target=TOKEN, value="0", data=APPROVE_CALLDATA)
-        resp = client.execute_deposit_wallet_batch(
-            calls=[call],
-            wallet_address=WALLET,
-            nonce="0",
-            deadline="1234567890",
-        )
+        with patch("py_builder_relayer_client.client.time.time", return_value=1000):
+            resp = client.execute_deposit_wallet_batch(
+                calls=[call],
+                wallet_address=WALLET,
+                nonce="0",
+                deadline="1600",
+            )
 
         method, path, body = client._post_request.call_args[0]
         self.assertEqual(POST, method)
@@ -81,9 +83,54 @@ class TestClientDepositWallet(TestCase):
         self.assertEqual(
             {
                 "depositWallet": WALLET,
-                "deadline": "1234567890",
+                "deadline": "1600",
                 "calls": [call.to_dict()],
             },
             body["depositWalletParams"],
         )
         self.assertEqual("test-txn", resp.transaction_id)
+
+    def test_execute_deposit_wallet_batch_rejects_deadline_too_soon(self):
+        client = self._client()
+        call = DepositWalletCall(target=TOKEN, value="0", data=APPROVE_CALLDATA)
+
+        with patch("py_builder_relayer_client.client.time.time", return_value=1000):
+            with self.assertRaises(RelayerClientException) as ctx:
+                client.execute_deposit_wallet_batch(
+                    calls=[call],
+                    wallet_address=WALLET,
+                    nonce="0",
+                    deadline="1299",
+                )
+
+        self.assertIn("at least 300 seconds", ctx.exception.msg)
+        client._post_request.assert_not_called()
+
+    def test_execute_deposit_wallet_batch_accepts_min_deadline_boundary(self):
+        client = self._client()
+        call = DepositWalletCall(target=TOKEN, value="0", data=APPROVE_CALLDATA)
+
+        with patch("py_builder_relayer_client.client.time.time", return_value=1000):
+            client.execute_deposit_wallet_batch(
+                calls=[call],
+                wallet_address=WALLET,
+                nonce="0",
+                deadline="1300",
+            )
+
+        self.assertTrue(client._post_request.called)
+
+    def test_execute_deposit_wallet_batch_rejects_invalid_deadline(self):
+        client = self._client()
+        call = DepositWalletCall(target=TOKEN, value="0", data=APPROVE_CALLDATA)
+
+        with self.assertRaises(RelayerClientException) as ctx:
+            client.execute_deposit_wallet_batch(
+                calls=[call],
+                wallet_address=WALLET,
+                nonce="0",
+                deadline="not-a-timestamp",
+            )
+
+        self.assertIn("unix timestamp", ctx.exception.msg)
+        client._post_request.assert_not_called()

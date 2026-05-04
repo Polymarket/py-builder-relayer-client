@@ -41,7 +41,7 @@ def main():
     token = to_checksum_address(os.getenv("USDC_ADDRESS"))
     spender = to_checksum_address(os.getenv("SPENDER_ADDRESS"))
     nonce = os.getenv("DEPOSIT_WALLET_NONCE", "0")
-    deadline = os.getenv("DEPOSIT_WALLET_DEADLINE", str(int(time.time()) + 240))
+    deadline = os.getenv("DEPOSIT_WALLET_DEADLINE", str(int(time.time()) + 600))
 
     approve_data = encode_approve(
         spender,
