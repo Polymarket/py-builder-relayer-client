@@ -13,7 +13,10 @@ from .config import (
     is_safe_config_valid,
     is_deposit_wallet_config_valid,
 )
-from .constants.constants import ZERO_ADDRESS
+from .constants.constants import (
+    MIN_DEPOSIT_WALLET_DEADLINE_BUFFER_SECONDS,
+    ZERO_ADDRESS,
+)
 from .gas import estimate_gas, DEFAULT_GAS_LIMIT
 from .http_helpers.helpers import get, post, POST
 from .builder.derive import derive, derive_proxy_wallet, derive_deposit_wallet
@@ -323,6 +326,8 @@ class RelayClient:
                 "Deposit wallet contracts are not configured for this chain"
             )
 
+        self._validate_deposit_wallet_deadline(deadline)
+
         from_address = self.signer.address()
         args = DepositWalletTransactionArgs(
             from_address=from_address,
@@ -347,6 +352,21 @@ class RelayClient:
             resp.get("transactionHash"),
             self,
         )
+
+    def _validate_deposit_wallet_deadline(self, deadline: str):
+        try:
+            deadline_ts = int(deadline)
+        except (TypeError, ValueError):
+            raise RelayerClientException(
+                "deposit wallet deadline must be a unix timestamp"
+            )
+
+        min_deadline = int(time.time()) + MIN_DEPOSIT_WALLET_DEADLINE_BUFFER_SECONDS
+        if deadline_ts < min_deadline:
+            raise RelayerClientException(
+                "deposit wallet deadline must be at least "
+                f"{MIN_DEPOSIT_WALLET_DEADLINE_BUFFER_SECONDS} seconds in the future"
+            )
 
     def poll_until_state(
         self,
