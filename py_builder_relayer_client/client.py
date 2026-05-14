@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 
@@ -415,7 +416,7 @@ class RelayClient:
         self, method: str, request_path: str, body: dict = None
     ) -> Optional[dict]:
         if body is not None:
-            body = str(body)
+            body = json.dumps(body)
         headers = self.builder_config.generate_builder_headers(
             method, request_path, body
         )
