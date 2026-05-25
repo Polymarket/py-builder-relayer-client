@@ -488,10 +488,10 @@ class RelayClient:
                 [{"to": factory, "data": FACTORY_BEACON_SELECTOR}, "latest"],
             )
         except ValueError as error:
-            if is_rpc_revert(error):
+            if _is_rpc_revert(error):
                 return ZERO_ADDRESS
             raise
-        return decode_address_return_data(data)
+        return _decode_address_return_data(data)
 
     def _is_contract_deployed(self, address: str) -> bool:
         code = self._rpc_call("eth_getCode", [address, "latest"])
@@ -519,12 +519,12 @@ class RelayClient:
             )
 
 
-def decode_address_return_data(data: str) -> str:
+def _decode_address_return_data(data: str) -> str:
     if data is None or len(data) < 66:
         return ZERO_ADDRESS
     return "0x" + data[-40:]
 
 
-def is_rpc_revert(error: ValueError) -> bool:
+def _is_rpc_revert(error: ValueError) -> bool:
     message = str(error).lower()
     return "revert" in message or "'code': 3" in message or '"code": 3' in message
