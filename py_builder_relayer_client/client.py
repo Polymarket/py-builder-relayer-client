@@ -506,6 +506,8 @@ class RelayClient:
         result = response.json()
         if "error" in result:
             raise ValueError(f"RPC error: {result['error']}")
+        if "result" not in result:
+            raise ValueError("No result in RPC response")
         return result.get("result")
 
     def assert_signer_needed(self):

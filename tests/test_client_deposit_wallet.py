@@ -58,6 +58,17 @@ class TestClientDepositWallet(TestCase):
         )
         self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
 
+    def test_rpc_call_requires_result_key(self):
+        client = self._client()
+        with patch("py_builder_relayer_client.client.requests.post") as mock_post:
+            response = Mock()
+            response.json.return_value = {"jsonrpc": "2.0", "id": 1}
+            response.raise_for_status.return_value = None
+            mock_post.return_value = response
+
+            with self.assertRaisesRegex(ValueError, "No result in RPC response"):
+                client._rpc_call("eth_call", [])
+
     def test_get_deployed_accepts_wallet_type(self):
         client = self._client()
         with patch(
