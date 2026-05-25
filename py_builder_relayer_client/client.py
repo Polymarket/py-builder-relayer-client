@@ -19,7 +19,7 @@ from .http_helpers.helpers import get, post, POST
 from .builder.derive import (
     derive,
     derive_beacon_deposit_wallet,
-    derive_deposit_wallet,
+    derive_uups_deposit_wallet,
     derive_proxy_wallet,
 )
 from .builder.safe import build_safe_transaction_request
@@ -56,6 +56,13 @@ from .endpoints import (
 from .response import ClientRelayerTransactionResponse
 
 
+FACTORY_BEACON_SELECTOR = "0x49493a4d"
+DEFAULT_RPC_URLS = {
+    137: "https://polygon-rpc.com",
+    80002: "https://rpc-amoy.polygon.technology",
+}
+
+
 class RelayClient:
     """
     Client for the Polymarket Relayer
@@ -76,7 +83,7 @@ class RelayClient:
         )
         self.chain_id = chain_id
         self.contract_config = get_contract_config(chain_id)
-        self.rpc_url = rpc_url
+        self.rpc_url = rpc_url or DEFAULT_RPC_URLS.get(chain_id)
 
         self.signer = None
         if private_key is not None:
@@ -456,17 +463,50 @@ class RelayClient:
                 "Deposit wallet contracts are not configured for this chain"
             )
         addr = self.signer.address()
-        if self.contract_config.deposit_wallet_beacon:
-            return derive_beacon_deposit_wallet(
-                addr,
-                self.contract_config.deposit_wallet_factory,
-                self.contract_config.deposit_wallet_beacon,
-            )
-        return derive_deposit_wallet(
+        uups_address = derive_uups_deposit_wallet(
             addr,
             self.contract_config.deposit_wallet_factory,
             self.contract_config.deposit_wallet_implementation,
         )
+        beacon = self.get_deposit_wallet_factory_beacon(
+            self.contract_config.deposit_wallet_factory
+        )
+        if beacon.lower() == ZERO_ADDRESS.lower():
+            return uups_address
+        if self.is_contract_deployed(uups_address):
+            return uups_address
+        return derive_beacon_deposit_wallet(
+            addr,
+            self.contract_config.deposit_wallet_factory,
+            beacon,
+        )
+
+    def get_deposit_wallet_factory_beacon(self, factory: str) -> str:
+        try:
+            data = self.rpc_call(
+                "eth_call",
+                [{"to": factory, "data": FACTORY_BEACON_SELECTOR}, "latest"],
+            )
+        except ValueError as error:
+            if is_rpc_revert(error):
+                return ZERO_ADDRESS
+            raise
+        return decode_address_return_data(data)
+
+    def is_contract_deployed(self, address: str) -> bool:
+        code = self.rpc_call("eth_getCode", [address, "latest"])
+        return code not in (None, "0x")
+
+    def rpc_call(self, method: str, params: list):
+        if self.rpc_url is None:
+            raise RelayerClientException("rpc_url is required for this endpoint")
+        payload = {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}
+        response = requests.post(self.rpc_url, json=payload, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+        if "error" in result:
+            raise ValueError(f"RPC error: {result['error']}")
+        return result.get("result")
 
     def assert_signer_needed(self):
         if self.signer is None:
@@ -477,3 +517,14 @@ class RelayClient:
             raise RelayerClientException(
                 "builder credentials are required for this endpoint"
             )
+
+
+def decode_address_return_data(data: str) -> str:
+    if data is None or len(data) < 66:
+        return ZERO_ADDRESS
+    return "0x" + data[-40:]
+
+
+def is_rpc_revert(error: ValueError) -> bool:
+    message = str(error).lower()
+    return "revert" in message or "'code': 3" in message or '"code": 3' in message

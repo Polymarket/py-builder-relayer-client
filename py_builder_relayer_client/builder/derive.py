@@ -97,7 +97,7 @@ def deposit_wallet_args(owner: str, factory: str) -> bytes:
     return encode(["address", "bytes32"], [factory, wallet_id])
 
 
-def derive_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
+def derive_uups_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
     factory = to_checksum_address(factory)
     implementation = to_checksum_address(implementation)
 
@@ -108,6 +108,10 @@ def derive_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
         bytecode_hash=bytecode_hash, from_address=factory, salt=salt
     )
     return to_checksum_address(wallet_address)
+
+
+def derive_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
+    return derive_uups_deposit_wallet(owner, factory, implementation)
 
 
 def derive_beacon_deposit_wallet(owner: str, factory: str, beacon: str) -> str:

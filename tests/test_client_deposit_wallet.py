@@ -11,8 +11,10 @@ from py_builder_relayer_client.endpoints import SUBMIT_TRANSACTION
 TEST_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 WALLET = "0xBc0fF067b7740Eff76C1ca93c875Ba6B890d6B50"
+UUPS_WALLET = "0xdf8b9E8f9AB23f261F6e1B171B7454ae6E46Ba76"
 TOKEN = "0x0000000000000000000000000000000000000001"
 APPROVE_CALLDATA = "0x095ea7b30000000000000000000000000000000000000000000000000000000000000002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+BEACON = "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a"
 
 
 class TestClientDepositWallet(TestCase):
@@ -31,7 +33,30 @@ class TestClientDepositWallet(TestCase):
 
     def test_get_expected_deposit_wallet(self):
         client = self._client()
+        client.rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x",
+            ]
+        )
         self.assertEqual(WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_expected_deposit_wallet_returns_uups_when_factory_has_no_beacon(self):
+        client = self._client()
+        client.rpc_call = Mock(
+            return_value="0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_expected_deposit_wallet_returns_deployed_uups_wallet(self):
+        client = self._client()
+        client.rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x01",
+            ]
+        )
+        self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
 
     def test_get_deployed_accepts_wallet_type(self):
         client = self._client()

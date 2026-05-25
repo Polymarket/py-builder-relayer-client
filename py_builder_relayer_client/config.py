@@ -22,8 +22,6 @@ class ContractConfig:
 
     deposit_wallet_implementation: str = ""
 
-    deposit_wallet_beacon: str = ""
-
 
 CONFIG = {
     137: ContractConfig(
@@ -38,9 +36,6 @@ CONFIG = {
         ),
         deposit_wallet_implementation=to_checksum_address(
             "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB"
-        ),
-        deposit_wallet_beacon=to_checksum_address(
-            "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a"
         ),
     ),
     80002: ContractConfig(
@@ -78,6 +73,6 @@ def is_safe_config_valid(config: ContractConfig) -> bool:
 
 
 def is_deposit_wallet_config_valid(config: ContractConfig) -> bool:
-    return bool(config.deposit_wallet_factory) and (
-        bool(config.deposit_wallet_implementation) or bool(config.deposit_wallet_beacon)
+    return bool(config.deposit_wallet_factory) and bool(
+        config.deposit_wallet_implementation
     )
