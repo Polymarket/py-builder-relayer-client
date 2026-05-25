@@ -19,6 +19,10 @@ class TestConfig(TestCase):
             "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB",
             cfg.deposit_wallet_implementation,
         )
+        self.assertEqual(
+            "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a",
+            cfg.deposit_wallet_beacon,
+        )
 
         chain_id = 80002
         cfg = get_contract_config(chain_id)

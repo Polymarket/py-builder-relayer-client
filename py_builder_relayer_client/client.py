@@ -16,7 +16,12 @@ from .config import (
 from .constants.constants import ZERO_ADDRESS
 from .gas import estimate_gas, DEFAULT_GAS_LIMIT
 from .http_helpers.helpers import get, post, POST
-from .builder.derive import derive, derive_proxy_wallet, derive_deposit_wallet
+from .builder.derive import (
+    derive,
+    derive_beacon_deposit_wallet,
+    derive_deposit_wallet,
+    derive_proxy_wallet,
+)
 from .builder.safe import build_safe_transaction_request
 from .builder.proxy import build_proxy_transaction_request
 from .builder.create import build_safe_create_transaction_request
@@ -451,6 +456,12 @@ class RelayClient:
                 "Deposit wallet contracts are not configured for this chain"
             )
         addr = self.signer.address()
+        if self.contract_config.deposit_wallet_beacon:
+            return derive_beacon_deposit_wallet(
+                addr,
+                self.contract_config.deposit_wallet_factory,
+                self.contract_config.deposit_wallet_beacon,
+            )
         return derive_deposit_wallet(
             addr,
             self.contract_config.deposit_wallet_factory,
