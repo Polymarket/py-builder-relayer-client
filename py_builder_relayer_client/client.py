@@ -495,7 +495,7 @@ class RelayClient:
 
     def _is_contract_deployed(self, address: str) -> bool:
         code = self._rpc_call("eth_getCode", [address, "latest"])
-        return code not in (None, "0x")
+        return not _is_empty_bytecode(code)
 
     def _rpc_call(self, method: str, params: list):
         if self.rpc_url is None:
@@ -530,3 +530,10 @@ def _decode_address_return_data(data: str) -> str:
 def _is_rpc_revert(error: ValueError) -> bool:
     message = str(error).lower()
     return "revert" in message or "'code': 3" in message or '"code": 3' in message
+
+
+def _is_empty_bytecode(code: str) -> bool:
+    if code is None:
+        return True
+    normalized = code[2:] if code.startswith(("0x", "0X")) else code
+    return normalized == "" or int(normalized, 16) == 0

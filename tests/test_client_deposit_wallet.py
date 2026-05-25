@@ -58,6 +58,16 @@ class TestClientDepositWallet(TestCase):
         )
         self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
 
+    def test_get_expected_deposit_wallet_treats_zero_code_as_not_deployed(self):
+        client = self._client()
+        client._rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x0",
+            ]
+        )
+        self.assertEqual(WALLET, client.get_expected_deposit_wallet())
+
     def test_rpc_call_requires_result_key(self):
         client = self._client()
         with patch("py_builder_relayer_client.client.requests.post") as mock_post:
