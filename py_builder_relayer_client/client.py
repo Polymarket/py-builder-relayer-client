@@ -468,12 +468,12 @@ class RelayClient:
             self.contract_config.deposit_wallet_factory,
             self.contract_config.deposit_wallet_implementation,
         )
-        beacon = self.get_deposit_wallet_factory_beacon(
+        beacon = self._get_deposit_wallet_factory_beacon(
             self.contract_config.deposit_wallet_factory
         )
         if beacon.lower() == ZERO_ADDRESS.lower():
             return uups_address
-        if self.is_contract_deployed(uups_address):
+        if self._is_contract_deployed(uups_address):
             return uups_address
         return derive_beacon_deposit_wallet(
             addr,
@@ -481,9 +481,9 @@ class RelayClient:
             beacon,
         )
 
-    def get_deposit_wallet_factory_beacon(self, factory: str) -> str:
+    def _get_deposit_wallet_factory_beacon(self, factory: str) -> str:
         try:
-            data = self.rpc_call(
+            data = self._rpc_call(
                 "eth_call",
                 [{"to": factory, "data": FACTORY_BEACON_SELECTOR}, "latest"],
             )
@@ -493,11 +493,11 @@ class RelayClient:
             raise
         return decode_address_return_data(data)
 
-    def is_contract_deployed(self, address: str) -> bool:
-        code = self.rpc_call("eth_getCode", [address, "latest"])
+    def _is_contract_deployed(self, address: str) -> bool:
+        code = self._rpc_call("eth_getCode", [address, "latest"])
         return code not in (None, "0x")
 
-    def rpc_call(self, method: str, params: list):
+    def _rpc_call(self, method: str, params: list):
         if self.rpc_url is None:
             raise RelayerClientException("rpc_url is required for this endpoint")
         payload = {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}

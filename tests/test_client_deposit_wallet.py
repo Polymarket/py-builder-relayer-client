@@ -33,7 +33,7 @@ class TestClientDepositWallet(TestCase):
 
     def test_get_expected_deposit_wallet(self):
         client = self._client()
-        client.rpc_call = Mock(
+        client._rpc_call = Mock(
             side_effect=[
                 f"0x000000000000000000000000{BEACON[2:]}",
                 "0x",
@@ -43,14 +43,14 @@ class TestClientDepositWallet(TestCase):
 
     def test_get_expected_deposit_wallet_returns_uups_when_factory_has_no_beacon(self):
         client = self._client()
-        client.rpc_call = Mock(
+        client._rpc_call = Mock(
             return_value="0x0000000000000000000000000000000000000000000000000000000000000000"
         )
         self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
 
     def test_get_expected_deposit_wallet_returns_deployed_uups_wallet(self):
         client = self._client()
-        client.rpc_call = Mock(
+        client._rpc_call = Mock(
             side_effect=[
                 f"0x000000000000000000000000{BEACON[2:]}",
                 "0x01",
