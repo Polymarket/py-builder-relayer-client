@@ -111,6 +111,11 @@ def derive_uups_deposit_wallet(owner: str, factory: str, implementation: str) ->
 
 
 def derive_deposit_wallet(owner: str, factory: str, implementation: str) -> str:
+    """
+    Deprecated: use RelayClient.get_expected_deposit_wallet().
+
+    This helper only derives UUPS deposit wallet addresses.
+    """
     return derive_uups_deposit_wallet(owner, factory, implementation)
 
 
