@@ -1,10 +1,15 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from py_builder_relayer_client.client import RelayClient, _is_rpc_revert
+from py_builder_relayer_client.client import (
+    DEFAULT_RPC_URLS,
+    RelayClient,
+    _is_rpc_revert,
+)
 from py_builder_relayer_client.http_helpers.helpers import POST
 from py_builder_relayer_client.models import DepositWalletCall, TransactionType
 from py_builder_relayer_client.endpoints import SUBMIT_TRANSACTION
+from py_builder_relayer_client.gas import DEFAULT_GAS_LIMIT
 
 
 # Public Hardhat/Anvil fixture key. This is not a live credential.
@@ -78,6 +83,41 @@ class TestClientDepositWallet(TestCase):
 
             with self.assertRaisesRegex(ValueError, "No result in RPC response"):
                 client._rpc_call("eth_call", [])
+
+    def test_rpc_call_uses_default_rpc_url_for_known_chain(self):
+        client = self._client()
+        with patch("py_builder_relayer_client.client.requests.post") as mock_post:
+            response = Mock()
+            response.json.return_value = {"jsonrpc": "2.0", "id": 1, "result": "0x"}
+            response.raise_for_status.return_value = None
+            mock_post.return_value = response
+
+            self.assertEqual("0x", client._rpc_call("eth_getCode", [WALLET, "latest"]))
+
+        mock_post.assert_called_once_with(
+            DEFAULT_RPC_URLS[137],
+            json={
+                "jsonrpc": "2.0",
+                "method": "eth_getCode",
+                "params": [WALLET, "latest"],
+                "id": 1,
+            },
+            timeout=10,
+        )
+
+    def test_proxy_gas_estimation_does_not_use_default_rpc_url(self):
+        client = self._client()
+        with patch(
+            "py_builder_relayer_client.client.estimate_gas"
+        ) as mock_estimate_gas:
+            self.assertEqual(
+                str(DEFAULT_GAS_LIMIT),
+                client._estimate_proxy_gas(
+                    ADDRESS, client.contract_config.proxy_factory, "0x"
+                ),
+            )
+
+        mock_estimate_gas.assert_not_called()
 
     def test_is_rpc_revert_matches_exact_error_code_3(self):
         self.assertTrue(_is_rpc_revert(ValueError("RPC error: {'code': 3}")))

@@ -84,7 +84,7 @@ class RelayClient:
         )
         self.chain_id = chain_id
         self.contract_config = get_contract_config(chain_id)
-        self.rpc_url = rpc_url or DEFAULT_RPC_URLS.get(chain_id)
+        self.rpc_url = rpc_url
 
         self.signer = None
         if private_key is not None:
@@ -499,10 +499,11 @@ class RelayClient:
         return not _is_empty_bytecode(code)
 
     def _rpc_call(self, method: str, params: list):
-        if self.rpc_url is None:
+        rpc_url = self.rpc_url or DEFAULT_RPC_URLS.get(self.chain_id)
+        if rpc_url is None:
             raise RelayerClientException("rpc_url is required for this endpoint")
         payload = {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}
-        response = requests.post(self.rpc_url, json=payload, timeout=10)
+        response = requests.post(rpc_url, json=payload, timeout=10)
         response.raise_for_status()
         result = response.json()
         if "error" in result:
