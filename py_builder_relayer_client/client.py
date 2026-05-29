@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import requests
@@ -529,7 +530,10 @@ def _decode_address_return_data(data: str) -> str:
 
 def _is_rpc_revert(error: ValueError) -> bool:
     message = str(error).lower()
-    return "revert" in message or "'code': 3" in message or '"code": 3' in message
+    return (
+        "revert" in message
+        or re.search(r"['\"]code['\"]\s*:\s*3\s*([,}]|$)", message) is not None
+    )
 
 
 def _is_empty_bytecode(code: str) -> bool:

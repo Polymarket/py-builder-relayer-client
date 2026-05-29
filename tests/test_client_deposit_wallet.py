@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from py_builder_relayer_client.client import RelayClient
+from py_builder_relayer_client.client import RelayClient, _is_rpc_revert
 from py_builder_relayer_client.http_helpers.helpers import POST
 from py_builder_relayer_client.models import DepositWalletCall, TransactionType
 from py_builder_relayer_client.endpoints import SUBMIT_TRANSACTION
@@ -78,6 +78,13 @@ class TestClientDepositWallet(TestCase):
 
             with self.assertRaisesRegex(ValueError, "No result in RPC response"):
                 client._rpc_call("eth_call", [])
+
+    def test_is_rpc_revert_matches_exact_error_code_3(self):
+        self.assertTrue(_is_rpc_revert(ValueError("RPC error: {'code': 3}")))
+        self.assertTrue(_is_rpc_revert(ValueError('RPC error: {"code": 3}')))
+        self.assertFalse(_is_rpc_revert(ValueError("RPC error: {'code': 30}")))
+        self.assertFalse(_is_rpc_revert(ValueError('RPC error: {"code": 30}')))
+        self.assertFalse(_is_rpc_revert(ValueError("RPC error: {'code': 3.1}")))
 
     def test_get_deployed_accepts_wallet_type(self):
         client = self._client()
