@@ -59,8 +59,8 @@ from .response import ClientRelayerTransactionResponse
 
 FACTORY_BEACON_SELECTOR = "0x49493a4d"
 DEFAULT_RPC_URLS = {
-    137: "https://polygon-rpc.com",
-    80002: "https://rpc-amoy.polygon.technology",
+    137: "https://polygon.drpc.org",
+    80002: "https://polygon-amoy.drpc.org",
 }
 
 
