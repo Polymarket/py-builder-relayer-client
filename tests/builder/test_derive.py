@@ -1,6 +1,11 @@
 from unittest import TestCase
 
-from py_builder_relayer_client.builder.derive import derive, derive_deposit_wallet
+from py_builder_relayer_client.builder.derive import (
+    derive,
+    derive_beacon_deposit_wallet,
+    derive_deposit_wallet,
+    derive_uups_deposit_wallet,
+)
 
 
 class TestDerive(TestCase):
@@ -24,6 +29,14 @@ class TestDerive(TestCase):
         owner = "0xA60601A4d903af91855C52BFB3814f6bA342f201"
         factory = "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
         implementation = "0x58CA52ebe0DadfdF531Cde7062e76746de4Db1eB"
-        wallet = derive_deposit_wallet(owner, factory, implementation)
+        wallet = derive_uups_deposit_wallet(owner, factory, implementation)
         expected_wallet = "0x8b60BF0f650Bf7a0d93F10D72375b37De18F8c40"
+        self.assertEqual(expected_wallet, wallet)
+
+    def test_derive_beacon_deposit_wallet_polygon_factory(self):
+        owner = "0x0000000000000000000000000000000000000001"
+        factory = "0x00000000000Fb5C9ADea0298D729A0CB3823Cc07"
+        beacon = "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a"
+        wallet = derive_beacon_deposit_wallet(owner, factory, beacon)
+        expected_wallet = "0x94bF330955A0b957662fEaF878dE77bf25f76cD9"
         self.assertEqual(expected_wallet, wallet)

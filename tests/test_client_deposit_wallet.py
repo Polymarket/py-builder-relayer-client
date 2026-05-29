@@ -1,18 +1,25 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from py_builder_relayer_client.client import RelayClient
+from py_builder_relayer_client.client import (
+    DEFAULT_RPC_URLS,
+    RelayClient,
+    _is_rpc_revert,
+)
 from py_builder_relayer_client.http_helpers.helpers import POST
 from py_builder_relayer_client.models import DepositWalletCall, TransactionType
 from py_builder_relayer_client.endpoints import SUBMIT_TRANSACTION
+from py_builder_relayer_client.gas import DEFAULT_GAS_LIMIT
 
 
 # Public Hardhat/Anvil fixture key. This is not a live credential.
 TEST_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-WALLET = "0xdf8b9E8f9AB23f261F6e1B171B7454ae6E46Ba76"
+WALLET = "0xBc0fF067b7740Eff76C1ca93c875Ba6B890d6B50"
+UUPS_WALLET = "0xdf8b9E8f9AB23f261F6e1B171B7454ae6E46Ba76"
 TOKEN = "0x0000000000000000000000000000000000000001"
 APPROVE_CALLDATA = "0x095ea7b30000000000000000000000000000000000000000000000000000000000000002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+BEACON = "0x7A18EDfe055488A3128f01F563e5B479D92ffc3a"
 
 
 class TestClientDepositWallet(TestCase):
@@ -31,7 +38,93 @@ class TestClientDepositWallet(TestCase):
 
     def test_get_expected_deposit_wallet(self):
         client = self._client()
+        client._rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x",
+            ]
+        )
         self.assertEqual(WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_expected_deposit_wallet_returns_uups_when_factory_has_no_beacon(self):
+        client = self._client()
+        client._rpc_call = Mock(
+            return_value="0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_expected_deposit_wallet_returns_deployed_uups_wallet(self):
+        client = self._client()
+        client._rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x01",
+            ]
+        )
+        self.assertEqual(UUPS_WALLET, client.get_expected_deposit_wallet())
+
+    def test_get_expected_deposit_wallet_treats_zero_code_as_not_deployed(self):
+        client = self._client()
+        client._rpc_call = Mock(
+            side_effect=[
+                f"0x000000000000000000000000{BEACON[2:]}",
+                "0x0",
+            ]
+        )
+        self.assertEqual(WALLET, client.get_expected_deposit_wallet())
+
+    def test_rpc_call_requires_result_key(self):
+        client = self._client()
+        with patch("py_builder_relayer_client.client.requests.post") as mock_post:
+            response = Mock()
+            response.json.return_value = {"jsonrpc": "2.0", "id": 1}
+            response.raise_for_status.return_value = None
+            mock_post.return_value = response
+
+            with self.assertRaisesRegex(ValueError, "No result in RPC response"):
+                client._rpc_call("eth_call", [])
+
+    def test_rpc_call_uses_default_rpc_url_for_known_chain(self):
+        client = self._client()
+        with patch("py_builder_relayer_client.client.requests.post") as mock_post:
+            response = Mock()
+            response.json.return_value = {"jsonrpc": "2.0", "id": 1, "result": "0x"}
+            response.raise_for_status.return_value = None
+            mock_post.return_value = response
+
+            self.assertEqual("0x", client._rpc_call("eth_getCode", [WALLET, "latest"]))
+
+        mock_post.assert_called_once_with(
+            DEFAULT_RPC_URLS[137],
+            json={
+                "jsonrpc": "2.0",
+                "method": "eth_getCode",
+                "params": [WALLET, "latest"],
+                "id": 1,
+            },
+            timeout=10,
+        )
+
+    def test_proxy_gas_estimation_does_not_use_default_rpc_url(self):
+        client = self._client()
+        with patch(
+            "py_builder_relayer_client.client.estimate_gas"
+        ) as mock_estimate_gas:
+            self.assertEqual(
+                str(DEFAULT_GAS_LIMIT),
+                client._estimate_proxy_gas(
+                    ADDRESS, client.contract_config.proxy_factory, "0x"
+                ),
+            )
+
+        mock_estimate_gas.assert_not_called()
+
+    def test_is_rpc_revert_matches_exact_error_code_3(self):
+        self.assertTrue(_is_rpc_revert(ValueError("RPC error: {'code': 3}")))
+        self.assertTrue(_is_rpc_revert(ValueError('RPC error: {"code": 3}')))
+        self.assertFalse(_is_rpc_revert(ValueError("RPC error: {'code': 30}")))
+        self.assertFalse(_is_rpc_revert(ValueError('RPC error: {"code": 30}')))
+        self.assertFalse(_is_rpc_revert(ValueError("RPC error: {'code': 3.1}")))
 
     def test_get_deployed_accepts_wallet_type(self):
         client = self._client()

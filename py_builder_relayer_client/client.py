@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import requests
@@ -16,7 +17,12 @@ from .config import (
 from .constants.constants import ZERO_ADDRESS
 from .gas import estimate_gas, DEFAULT_GAS_LIMIT
 from .http_helpers.helpers import get, post, POST
-from .builder.derive import derive, derive_proxy_wallet, derive_deposit_wallet
+from .builder.derive import (
+    derive,
+    derive_beacon_deposit_wallet,
+    derive_uups_deposit_wallet,
+    derive_proxy_wallet,
+)
 from .builder.safe import build_safe_transaction_request
 from .builder.proxy import build_proxy_transaction_request
 from .builder.create import build_safe_create_transaction_request
@@ -49,6 +55,13 @@ from .endpoints import (
     GET_RELAY_PAYLOAD,
 )
 from .response import ClientRelayerTransactionResponse
+
+
+FACTORY_BEACON_SELECTOR = "0x49493a4d"
+DEFAULT_RPC_URLS = {
+    137: "https://polygon.drpc.org",
+    80002: "https://polygon-amoy.drpc.org",
+}
 
 
 class RelayClient:
@@ -451,11 +464,53 @@ class RelayClient:
                 "Deposit wallet contracts are not configured for this chain"
             )
         addr = self.signer.address()
-        return derive_deposit_wallet(
+        uups_address = derive_uups_deposit_wallet(
             addr,
             self.contract_config.deposit_wallet_factory,
             self.contract_config.deposit_wallet_implementation,
         )
+        beacon = self._get_deposit_wallet_factory_beacon(
+            self.contract_config.deposit_wallet_factory
+        )
+        if beacon.lower() == ZERO_ADDRESS.lower():
+            return uups_address
+        if self._is_contract_deployed(uups_address):
+            return uups_address
+        return derive_beacon_deposit_wallet(
+            addr,
+            self.contract_config.deposit_wallet_factory,
+            beacon,
+        )
+
+    def _get_deposit_wallet_factory_beacon(self, factory: str) -> str:
+        try:
+            data = self._rpc_call(
+                "eth_call",
+                [{"to": factory, "data": FACTORY_BEACON_SELECTOR}, "latest"],
+            )
+        except ValueError as error:
+            if _is_rpc_revert(error):
+                return ZERO_ADDRESS
+            raise
+        return _decode_address_return_data(data)
+
+    def _is_contract_deployed(self, address: str) -> bool:
+        code = self._rpc_call("eth_getCode", [address, "latest"])
+        return not _is_empty_bytecode(code)
+
+    def _rpc_call(self, method: str, params: list):
+        rpc_url = self.rpc_url or DEFAULT_RPC_URLS.get(self.chain_id)
+        if rpc_url is None:
+            raise RelayerClientException("rpc_url is required for this endpoint")
+        payload = {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}
+        response = requests.post(rpc_url, json=payload, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+        if "error" in result:
+            raise ValueError(f"RPC error: {result['error']}")
+        if "result" not in result:
+            raise ValueError("No result in RPC response")
+        return result.get("result")
 
     def assert_signer_needed(self):
         if self.signer is None:
@@ -466,3 +521,24 @@ class RelayClient:
             raise RelayerClientException(
                 "builder credentials are required for this endpoint"
             )
+
+
+def _decode_address_return_data(data: str) -> str:
+    if data is None or len(data) < 66:
+        return ZERO_ADDRESS
+    return "0x" + data[-40:]
+
+
+def _is_rpc_revert(error: ValueError) -> bool:
+    message = str(error).lower()
+    return (
+        "revert" in message
+        or re.search(r"['\"]code['\"]\s*:\s*3\s*([,}]|$)", message) is not None
+    )
+
+
+def _is_empty_bytecode(code: str) -> bool:
+    if code is None:
+        return True
+    normalized = code[2:] if code.startswith(("0x", "0X")) else code
+    return normalized == "" or int(normalized, 16) == 0
