@@ -36,6 +36,32 @@ class TestClientDepositWallet(TestCase):
         )
         return client
 
+    def test_constructor_accepts_documented_keyword_aliases(self):
+        client = RelayClient(
+            host="http://localhost:8080/",
+            chain=137,
+            signer=TEST_PRIVATE_KEY,
+            relayer_api_key="test-api-key",
+            relayer_api_key_address=ADDRESS,
+        )
+
+        self.assertEqual("http://localhost:8080", client.relayer_url)
+        self.assertEqual(137, client.chain_id)
+        self.assertEqual("test-api-key", client.relayer_api_key)
+        self.assertEqual(ADDRESS, client.relayer_api_key_address)
+        self.assertIsNotNone(client.signer)
+
+    def test_constructor_prefers_existing_parameter_names_over_aliases(self):
+        client = RelayClient(
+            relayer_url="http://localhost:8080",
+            host="http://example.com",
+            chain_id=137,
+            chain=80002,
+        )
+
+        self.assertEqual("http://localhost:8080", client.relayer_url)
+        self.assertEqual(137, client.chain_id)
+
     def test_get_expected_deposit_wallet(self):
         client = self._client()
         client._rpc_call = Mock(
