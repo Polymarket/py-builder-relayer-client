@@ -72,19 +72,38 @@ class RelayClient:
 
     def __init__(
         self,
-        relayer_url,
-        chain_id: int,
+        relayer_url=None,
+        chain_id: int = None,
         private_key: str = None,
         builder_config: BuilderConfig = None,
         relay_tx_type=None,
         rpc_url: str = None,
+        *,
+        host: str = None,
+        chain: int = None,
+        signer: str = None,
+        relayer_api_key: str = None,
+        relayer_api_key_address: str = None,
     ):
+        if relayer_url is None:
+            relayer_url = host
+        if chain_id is None:
+            chain_id = chain
+        if private_key is None:
+            private_key = signer
+        if relayer_url is None:
+            raise TypeError("relayer_url is required")
+        if chain_id is None:
+            raise TypeError("chain_id is required")
+
         self.relayer_url = (
             relayer_url[0:-1] if relayer_url.endswith("/") else relayer_url
         )
         self.chain_id = chain_id
         self.contract_config = get_contract_config(chain_id)
         self.rpc_url = rpc_url
+        self.relayer_api_key = relayer_api_key
+        self.relayer_api_key_address = relayer_api_key_address
 
         self.signer = None
         if private_key is not None:
