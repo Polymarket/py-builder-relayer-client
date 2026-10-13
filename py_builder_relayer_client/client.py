@@ -377,9 +377,11 @@ class RelayClient:
         if poll_frequency is not None and poll_frequency >= 1000:
             poll_frequency_ms = poll_frequency
 
-        print(
-            f"Waiting for transaction {transaction_id} matching states: {target_states}..."
-        )
+        self.logger.info(
+    "Waiting for transaction %s matching states: %s...",
+    transaction_id,
+    target_states,
+)
 
         for _ in range(poll_limit):
             transactions = self.get_transaction(transaction_id)
